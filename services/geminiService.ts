@@ -1,132 +1,101 @@
-import { GoogleGenAI, Modality, Type } from "@google/genai";
+import { GoogleGenAI, Modality } from "@google/genai";
 import { StoryPage } from "../types";
+import { staticStoryImage3 } from "../static/images";
 
 // Initialize the Gemini AI client.
-// The API key is automatically sourced from the `process.env.API_KEY` environment variable.
 const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
 /**
  * Converts a data URL string to a GenAI-compatible part object.
- * @param dataUrl The base64 encoded data URL (e.g., "data:image/jpeg;base64,...").
- * @returns An object with `inlineData` containing the mimeType and base64 data.
  */
 const dataUrlToGenaiPart = (dataUrl: string) => {
   const parts = dataUrl.split(',');
-  if (parts.length !== 2) {
-      throw new Error("Invalid data URL format");
-  }
-  const mimeTypePart = parts[0];
-  const data = parts[1];
+  if (parts.length !== 2) throw new Error("Invalid data URL format");
   
-  const mimeTypeMatch = mimeTypePart.match(/:(.*?);/);
-  if (!mimeTypeMatch || mimeTypeMatch.length < 2) {
-      throw new Error("Could not parse mime type from data URL");
-  }
-  const mimeType = mimeTypeMatch[1];
+  const mimeTypeMatch = parts[0].match(/:(.*?);/);
+  if (!mimeTypeMatch) throw new Error("Could not parse mime type from data URL");
   
   return {
       inlineData: {
-          mimeType,
-          data,
+          mimeType: mimeTypeMatch[1],
+          data: parts[1],
       },
   };
 };
 
-
 /**
- * Converts a user's photo to a cartoon avatar using the Gemini API.
- * @param base64Image The base64 encoded image from the user.
- * @returns A promise that resolves to a base64 data URL of the cartoon avatar.
+ * Converts a user's photo to a "Little Green Dragon" cartoon avatar.
  */
 export const generateCartoonAvatar = async (base64Image: string): Promise<string> => {
-  console.log("Generating cartoon avatar for image...");
-
+  console.log("Generating Little Green Dragon avatar...");
   const imagePart = dataUrlToGenaiPart(base64Image);
 
-  // Request the model to convert the user's photo into a cartoon avatar.
   const response = await ai.models.generateContent({
     model: 'gemini-2.5-flash-image',
     contents: {
       parts: [
         imagePart,
         {
-          text: "将这张照片转换成一个简单、友好的卡通头像，适用于儿童故事书。风格要干净可爱。背景应该是透明的。",
+          text: "将这张照片转换成一个Q版“小青龙”卡通头像，适用于儿童故事书。风格要干净可爱，有英雄气概。背景应该是透明的。",
         },
       ],
     },
     config: {
-      responseModalities: [Modality.IMAGE], // We expect an image as output.
+      responseModalities: [Modality.IMAGE],
     },
   });
 
-  // Extract the generated image data from the response.
   for (const part of response.candidates[0].content.parts) {
     if (part.inlineData) {
-      const base64ImageBytes: string = part.inlineData.data;
-      const mimeType = part.inlineData.mimeType;
+      const { data, mimeType } = part.inlineData;
       console.log("Avatar generated.");
-      return `data:${mimeType};base64,${base64ImageBytes}`;
+      return `data:${mimeType};base64,${data}`;
     }
   }
-
-  throw new Error("Could not generate cartoon avatar from the API response.");
+  throw new Error("Could not generate cartoon avatar.");
 };
 
+
+// --- Story Data ---
+const storyContent = [
+    {
+        story: "山洪与飓风，暴雨与海水席卷这里 ！ 我...我一个人快顶不住了！",
+        prompt: "A Q-version little green dragon (user's avatar), exhausted, resisting a huge hurricane and monstrous waves. Below is the ancient Dragon Harbor with thatched huts, dark clouds overhead. The little dragon looks tiny and helpless. Anime illustration style, high contrast.",
+    },
+    {
+        story: "未来的‘中国印刷城’！我需要支援！十万火急！",
+        prompt: "Close-up on the Q-version little green dragon (user's avatar), roaring towards the sky. A signal beam of light shoots from its mouth into a space-time vortex in the sky. It has a determined look. Epic illustration style during a storm.",
+    },
+    {
+        story: "收到！‘龙之军团’正在从纸上‘活’过来！米塑龙、竹子龙、烫金龙、像素龙…全体出动！",
+        isStatic: true,
+    },
+    {
+        story: "哇！我不是一个人在战斗！兄弟们，冲啊！尝尝‘中国印刷城’量产的厉害！",
+        prompt: "The Q-version little green dragon (user's avatar) leads the 'Dragon Legion' (rice-plastic dragon, bamboo dragon, hot-stamped gold dragon, pixel dragon). They are fighting together to defeat the disaster. The sky is clearing. Joyful, epic, Q-version illustration style.",
+    }
+];
+
+
 /**
- * Generates a 4-page storybook with text and images.
- * @param cartoonAvatar The base64 data URL of the generated cartoon avatar.
- * @returns A promise that resolves to an array of StoryPage objects.
+ * Generates the "Dragon Legion" storybook.
  */
 export const generateStorybook = async (cartoonAvatar: string): Promise<StoryPage[]> => {
-  console.log("Generating storybook text and images...");
+  console.log("Generating 'Dragon Legion' storybook...");
   const avatarPart = dataUrlToGenaiPart(cartoonAvatar);
 
-  // 1. Generate the story text and image prompts in one go as a JSON object.
-  const storyGenerationResponse = await ai.models.generateContent({
-    model: 'gemini-2.5-flash',
-    contents: {
-      parts: [
-        avatarPart,
-        { text: "为这个角色创作一个四页的中文儿童冒险故事。故事要简单、温馨、有想象力。请以JSON格式返回，包含四页的内容，每一页都有'story_text'（故事文本）和'image_prompt'（用于生成图片的英文提示，描述场景和角色动作）。" }
-      ]
-    },
-    config: {
-      responseMimeType: "application/json",
-      responseSchema: {
-        type: Type.ARRAY,
-        items: {
-          type: Type.OBJECT,
-          properties: {
-            story_text: {
-              type: Type.STRING,
-              description: '该页的中文故事文本。',
-            },
-            image_prompt: {
-              type: Type.STRING,
-              description: '用于生成该页图片的详细英文提示。例如: A vibrant storybook illustration of the character exploring a magical forest.',
-            },
-          },
-          required: ["story_text", "image_prompt"]
-        }
-      }
+  const imageGenerationPromises = storyContent.map((page, index) => {
+    // Page 3 is static and does not require generation.
+    if (page.isStatic) {
+        return Promise.resolve(null);
     }
-  });
 
-  const storyData = JSON.parse(storyGenerationResponse.text);
-
-  if (!Array.isArray(storyData) || storyData.length === 0) {
-      throw new Error("Failed to generate valid story data.");
-  }
-
-  // 2. Generate an image for each page using the generated prompts.
-  const imageGenerationPromises = storyData.map(pageData => {
     return ai.models.generateContent({
       model: 'gemini-2.5-flash-image',
       contents: {
         parts: [
           avatarPart,
-          // The prompt for image generation includes the style and the specific scene.
-          { text: `${pageData.image_prompt}. Style should be a vibrant, friendly, and cute children's storybook illustration.` },
+          { text: page.prompt },
         ],
       },
       config: {
@@ -135,18 +104,29 @@ export const generateStorybook = async (cartoonAvatar: string): Promise<StoryPag
     });
   });
 
-  const imageResponses = await Promise.all(imageGenerationPromises);
+  const responses = await Promise.all(imageGenerationPromises);
 
-  // 3. Combine the story text with the generated images.
-  const storyPages: StoryPage[] = imageResponses.map((response, index) => {
-    for (const part of response.candidates[0].content.parts) {
-      if (part.inlineData) {
-        const base64ImageBytes: string = part.inlineData.data;
-        const mimeType = part.inlineData.mimeType;
+  const storyPages: StoryPage[] = responses.map((response, index) => {
+    const content = storyContent[index];
+    
+    // Handle the static page 3
+    if (content.isStatic) {
         return {
-          image: `data:${mimeType};base64,${base64ImageBytes}`,
-          story: storyData[index].story_text, // Get the story text from the first API call.
+            image: staticStoryImage3,
+            story: content.story,
         };
+    }
+    
+    // Handle dynamically generated pages
+    if (response) {
+      for (const part of response.candidates[0].content.parts) {
+        if (part.inlineData) {
+          const { data, mimeType } = part.inlineData;
+          return {
+            image: `data:${mimeType};base64,${data}`,
+            story: content.story,
+          };
+        }
       }
     }
     throw new Error(`Could not generate image for page ${index + 1}.`);
