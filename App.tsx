@@ -3,7 +3,7 @@ import { OnboardingScreen } from './components/OnboardingScreen';
 import { UploadScreen } from './components/UploadScreen';
 import { GeneratingScreen } from './components/GeneratingScreen';
 import { ResultScreen } from './components/ResultScreen';
-import { generateCartoonAvatar, generateStorybook } from './services/openRouterService';
+import { generateCartoonAvatar, generateStorybook } from './services/geminiService';
 import { AppState, StoryPage } from './types';
 
 const App: React.FC = () => {
