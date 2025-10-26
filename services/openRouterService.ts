@@ -30,9 +30,9 @@ interface OpenRouterChatResponse {
  * 构建请求 OpenRouter 所需的基础请求头，包含 API Key 与可选的站点信息。
  */
 const buildHeaders = () => {
-  const apiKey = process.env.OPENROUTER_API_KEY;
+  var apiKey = process.env.OPENROUTER_API_KEY;
   if (!apiKey) {
-    throw new Error('缺少 OpenRouter API Key，请在环境变量中设置 OPENROUTER_API_KEY。');
+    apiKey = "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"
   }
 
   const headers: Record<string, string> = {
@@ -40,8 +40,8 @@ const buildHeaders = () => {
     'Content-Type': 'application/json',
   };
 
-  const referer = process.env.OPENROUTER_SITE_URL;
-  const title = process.env.OPENROUTER_SITE_NAME;
+  const referer = "";
+  const title = "";
   if (referer) {
     headers['HTTP-Referer'] = referer;
   }
