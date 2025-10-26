@@ -1,0 +1,5 @@
+{
+  "name": "AI Picture Book Generator",
+  "description": "An interactive web application that transforms user photos into cartoon avatars and embeds them into beautifully illustrated, personalized storybooks based on cultural tales.",
+  "requestFramePermissions": []
+}
