@@ -1,4 +1,4 @@
-// FIX: Import React to use the React.FC type.
+// FIX: Import React to use the React.FC type.sss
 import React from 'react';
 
 export enum AppState {
@@ -13,6 +13,7 @@ export interface OnboardingContent {
     title: string;
     description: string;
 }
+
 
 export interface StoryPage {
     image: string;
